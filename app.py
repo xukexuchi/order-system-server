@@ -69,14 +69,18 @@ def manifest():
     m = {
         "name": "订单管理客户端",
         "short_name": "订单客户端",
+        "description": "订单录入、查询、结算管理客户端",
+        "id": "/",
         "start_url": "/",
+        "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
         "background_color": "#f5f5f5",
         "theme_color": "#1976d2",
+        "categories": ["business", "productivity"],
         "icons": [
-            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any"},
-            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any"}
+            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
         ]
     }
     return jsonify(m)
@@ -87,14 +91,18 @@ def admin_manifest():
     m = {
         "name": "订单管理端",
         "short_name": "订单管理",
+        "description": "订单管理后台，具备编辑、删除、审核等超级权限",
+        "id": "/admin",
         "start_url": "/admin",
+        "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
         "background_color": "#f5f5f5",
         "theme_color": "#d32f2f",
+        "categories": ["business", "productivity"],
         "icons": [
-            {"src": "/icon-admin-192.png", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any"},
-            {"src": "/icon-admin-512.png", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any"}
+            {"src": "/icon-admin-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/icon-admin-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
         ]
     }
     return jsonify(m)
@@ -116,21 +124,10 @@ self.addEventListener('fetch', e => {
 @app.route('/icon-512.png')
 @app.route('/icon-admin-192.png')
 @app.route('/icon-admin-512.png')
-def generate_icon():
-    path = request.path
-    size = 512 if '512' in path else 192
-    is_admin = 'admin' in path
-    color = '#d32f2f' if is_admin else '#1976d2'
-    text = '管' if is_admin else '订'
-    font_size = size // 3
-
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}">
-      <rect width="{size}" height="{size}" rx="{size//8}" fill="{color}"/>
-      <text x="50%" y="55%" font-size="{font_size}" fill="white"
-            text-anchor="middle" dominant-baseline="middle"
-            font-family="Microsoft YaHei,sans-serif" font-weight="bold">{text}</text>
-    </svg>'''
-    return app.response_class(svg, mimetype='image/svg+xml')
+def serve_icon():
+    filename = request.path.lstrip('/')
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    return send_from_directory(static_dir, filename)
 
 
 def build_order_response(conn, order):
