@@ -59,6 +59,11 @@ def index():
     return render_template('mobile.html')
 
 
+@app.route('/admin')
+def admin_page():
+    return render_template('admin.html')
+
+
 @app.route('/manifest.json')
 def manifest():
     m = {

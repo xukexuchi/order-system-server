@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#d32f2f">
+    <title>订单管理 - 管理端</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+            color: white;
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 52px;
+            z-index: 99;
+        }
+        .tab {
+            flex: 1;
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+        }
+        .tab.active { color: #d32f2f; border-bottom-color: #d32f2f; font-weight: bold; }
+        .tab-content { display: none; padding: 16px; }
+        .tab-content.active { display: block; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .order-card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border-left: 4px solid #4caf50;
+        }
+        .order-card.cancelled { border-left-color: #d32f2f; }
+        .order-card.pending { border-left-color: #ff9800; }
+        .order-card .title { font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+        .order-card .info { font-size: 13px; color: #666; line-height: 1.6; }
+        .money { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .money-tag { padding: 3px 8px; background: #f5f5f5; border-radius: 6px; font-size: 12px; }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-active { background: #e8f5e9; color: #2e7d32; }
+        .status-cancelled { background: #ffebee; color: #d32f2f; }
+        .status-pending { background: #fff3e0; color: #f57c00; }
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-top: 8px;
+        }
+        .btn-approve { background: #2e7d32; color: white; }
+        .btn-reject { background: #d32f2f; color: white; }
+        .btn-edit { background: #1976d2; color: white; }
+        .btn-delete { background: #d32f2f; color: white; }
+        .btn-force { background: #f57c00; color: white; }
+        .btn-refresh {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        .search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .search-bar input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        .search-bar button {
+            padding: 10px 16px;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input[type="text"], input[type="number"], textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+        textarea { resize: vertical; min-height: 60px; }
+        .form-label { font-size: 13px; color: #555; margin-bottom: 4px; display: block; }
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+        }
+        .empty { text-align: center; padding: 40px; color: #999; }
+        .pending-reason {
+            background: #fff3e0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-size: 13px;
+            color: #e65100;
+        }
+        .count-badge {
+            background: #ffebee;
+            color: #d32f2f;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">订单管理 - 管理端(超级权限)</div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="all">全部订单</div>
+        <div class="tab" data-tab="pending">待审核 <span id="pending-count" class="count-badge">0</span></div>
+        <div class="tab" data-tab="edit">编辑管理</div>
+    </div>
+
+    <div id="tab-all" class="tab-content active">
+        <div class="search-bar">
+            <input type="text" id="search_no" placeholder="输入订单号搜索">
+            <button onclick="searchOrder()">搜索</button>
+        </div>
+        <button class="btn-refresh" onclick="loadAll()">刷新全部订单</button>
+        <div id="all-list"><div class="empty">加载中...</div></div>
+    </div>
+
+    <div id="tab-pending" class="tab-content">
+        <button class="btn-refresh" onclick="loadPending()">刷新待审核列表</button>
+        <div id="pending-list"><div class="empty">加载中...</div></div>
+    </div>
+
+    <div id="tab-edit" class="tab-content">
+        <div class="card">
+            <div class="search-bar" style="margin-bottom:10px;">
+                <input type="text" id="edit_no" placeholder="输入订单号" style="margin-bottom:0;">
+                <button onclick="loadForEdit()">加载</button>
+            </div>
+            <div id="edit-form" style="display:none;">
+                <span class="form-label">订单名称</span>
+                <input type="text" id="edit_name">
+                <span class="form-label">涉及功能</span>
+                <textarea id="edit_functions"></textarea>
+                <span class="form-label">增加功能</span>
+                <input type="text" id="edit_extra">
+                <span class="form-label">微处理器型号</span>
+                <input type="text" id="edit_processor">
+                <span class="form-label">处理器备注</span>
+                <input type="text" id="edit_processor_note">
+                <span class="form-label">总费用(元)</span>
+                <input type="number" id="edit_total_cost">
+                <span class="form-label">定金(元)</span>
+                <input type="number" id="edit_deposit">
+                <div id="edit-status" style="font-size:13px;color:#666;margin:10px 0;"></div>
+                <button class="btn btn-edit" onclick="saveEdit()">保存修改</button>
+                <button class="btn btn-force" onclick="forceCancel()">强制作废</button>
+                <button class="btn btn-delete" onclick="deleteOrder()">删除订单</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API = '';
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2500);
+        }
+
+        async function loadAll() {
+            try {
+                const resp = await fetch(API + '/api/orders');
+                const orders = await resp.json();
+                renderAll(orders);
+                const pending = orders.filter(o => o.cancel_requested && o.status === 'active');
+                document.getElementById('pending-count').textContent = pending.length;
+            } catch (e) { showToast('加载失败'); }
+        }
+
+        async function searchOrder() {
+            const no = document.getElementById('search_no').value.trim();
+            if (!no) { loadAll(); return; }
+            try {
+                const resp = await fetch(API + '/api/orders/' + no);
+                if (resp.status === 404) { showToast('未找到'); return; }
+                renderAll([await resp.json()]);
+            } catch (e) { showToast('搜索失败'); }
+        }
+
+        function renderAll(orders) {
+            const c = document.getElementById('all-list');
+            if (!orders.length) { c.innerHTML = '<div class="empty">暂无订单</div>'; return; }
+            c.innerHTML = orders.map(o => {
+                let sc = 'status-active', st = '正常', cc = '';
+                if (o.status === 'cancelled') { sc = 'status-cancelled'; st = '已作废'; cc = 'cancelled'; }
+                else if (o.cancel_requested) { sc = 'status-pending'; st = '审核中'; cc = 'pending'; }
+                const proc = o.processor_model === '其他' && o.processor_note ? '其他:' + o.processor_note : o.processor_model;
+                return `<div class="order-card ${cc}">
+                    <div class="title">【${o.order_no}】${o.order_name} <span class="status-badge ${sc}">${st}</span></div>
+                    <div class="info">
+                        功能: ${o.functions}<br>
+                        增加: ${o.extra_features || '无'}<br>
+                        处理器: ${proc}<br>
+                        创建: ${o.created_at || ''} | 更新: ${o.updated_at || ''}
+                    </div>
+                    <div class="money">
+                        <span class="money-tag">总计 ¥${o.total_cost.toFixed(2)}</span>
+                        <span class="money-tag">定金 ¥${o.deposit.toFixed(2)}</span>
+                        <span class="money-tag">已结 ¥${(o.total_settled||0).toFixed(2)}</span>
+                        <span class="money-tag">剩余 ¥${(o.remaining||0).toFixed(2)}</span>
+                    </div>
+                    <button class="btn btn-edit" onclick="gotoEdit('${o.order_no}')">编辑</button>
+                    <button class="btn btn-delete" onclick="quickDelete('${o.order_no}')">删除</button>
+                </div>`;
+            }).join('');
+        }
+
+        async function loadPending() {
+            try {
+                const resp = await fetch(API + '/api/orders');
+                const orders = await resp.json();
+                const pending = orders.filter(o => o.cancel_requested && o.status === 'active');
+                document.getElementById('pending-count').textContent = pending.length;
+                const c = document.getElementById('pending-list');
+                if (!pending.length) { c.innerHTML = '<div class="empty">暂无待审核</div>'; return; }
+                c.innerHTML = pending.map(o => `
+                    <div class="order-card pending">
+                        <div class="title">【${o.order_no}】${o.order_name}</div>
+                        <div class="pending-reason">作废原因: ${o.cancel_reason || '未填写'}</div>
+                        <div class="money">
+                            <span class="money-tag">总计 ¥${o.total_cost.toFixed(2)}</span>
+                            <span class="money-tag">定金 ¥${o.deposit.toFixed(2)}</span>
+                            <span class="money-tag">已结 ¥${(o.total_settled||0).toFixed(2)}</span>
+                            <span class="money-tag">剩余 ¥${(o.remaining||0).toFixed(2)}</span>
+                        </div>
+                        <button class="btn btn-approve" onclick="approveCancel('${o.order_no}')">批准作废</button>
+                        <button class="btn btn-reject" onclick="rejectCancel('${o.order_no}')">驳回申请</button>
+                    </div>
+                `).join('');
+            } catch (e) { showToast('加载失败'); }
+        }
+
+        async function approveCancel(no) {
+            if (!confirm('确定批准作废 ' + no + '？')) return;
+            try {
+                const resp = await fetch(API + '/api/orders/' + no + '/approve-cancel', { method: 'POST' });
+                const r = await resp.json();
+                showToast(r.message);
+                loadPending(); loadAll();
+            } catch (e) { showToast('操作失败'); }
+        }
+
+        async function rejectCancel(no) {
+            if (!confirm('确定驳回 ' + no + ' 的作废申请？')) return;
+            try {
+                const resp = await fetch(API + '/api/orders/' + no + '/reject-cancel', { method: 'POST' });
+                const r = await resp.json();
+                showToast(r.message);
+                loadPending(); loadAll();
+            } catch (e) { showToast('操作失败'); }
+        }
+
+        function gotoEdit(no) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector('[data-tab="edit"]').classList.add('active');
+            document.getElementById('tab-edit').classList.add('active');
+            document.getElementById('edit_no').value = no;
+            loadForEdit();
+        }
+
+        async function loadForEdit() {
+            const no = document.getElementById('edit_no').value.trim();
+            if (!no) { showToast('请输入订单号'); return; }
+            try {
+                const resp = await fetch(API + '/api/orders/' + no);
+                if (resp.status === 404) { showToast('未找到'); return; }
+                const o = await resp.json();
+                document.getElementById('edit-form').style.display = 'block';
+                document.getElementById('edit_name').value = o.order_name || '';
+                document.getElementById('edit_functions').value = o.functions || '';
+                document.getElementById('edit_extra').value = o.extra_features || '';
+                document.getElementById('edit_processor').value = o.processor_model || '';
+                document.getElementById('edit_processor_note').value = o.processor_note || '';
+                document.getElementById('edit_total_cost').value = o.total_cost || 0;
+                document.getElementById('edit_deposit').value = o.deposit || 0;
+                let status = o.status === 'active' ? '正常' : '已作废';
+                if (o.cancel_requested && o.status === 'active') status = '审核中';
+                document.getElementById('edit-status').innerHTML =
+                    `状态: <b>${status}</b> | 已结算: ¥${(o.total_settled||0).toFixed(2)} | 剩余: ¥${(o.remaining||0).toFixed(2)}<br>创建: ${o.created_at||''} | 更新: ${o.updated_at||''}`;
+            } catch (e) { showToast('加载失败'); }
+        }
+
+        async function saveEdit() {
+            const no = document.getElementById('edit_no').value.trim();
+            const data = {
+                order_name: document.getElementById('edit_name').value,
+                functions: document.getElementById('edit_functions').value,
+                extra_features: document.getElementById('edit_extra').value,
+                processor_model: document.getElementById('edit_processor').value,
+                processor_note: document.getElementById('edit_processor_note').value,
+                total_cost: parseFloat(document.getElementById('edit_total_cost').value) || 0,
+                deposit: parseFloat(document.getElementById('edit_deposit').value) || 0
+            };
+            try {
+                const resp = await fetch(API + '/api/orders/' + no, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const r = await resp.json();
+                showToast(r.message);
+                if (r.success) loadForEdit();
+            } catch (e) { showToast('保存失败'); }
+        }
+
+        async function forceCancel() {
+            const no = document.getElementById('edit_no').value.trim();
+            if (!confirm('确定强制作废 ' + no + '？不可撤销！')) return;
+            try {
+                const resp = await fetch(API + '/api/orders/' + no + '/force-cancel', { method: 'POST' });
+                const r = await resp.json();
+                showToast(r.message);
+                if (r.success) loadForEdit();
+            } catch (e) { showToast('操作失败'); }
+        }
+
+        async function deleteOrder() {
+            const no = document.getElementById('edit_no').value.trim();
+            if (!confirm('确定永久删除 ' + no + '？所有记录将被清除！')) return;
+            try {
+                const resp = await fetch(API + '/api/orders/' + no, { method: 'DELETE' });
+                const r = await resp.json();
+                showToast(r.message);
+                if (r.success) {
+                    document.getElementById('edit-form').style.display = 'none';
+                    document.getElementById('edit_no').value = '';
+                }
+            } catch (e) { showToast('删除失败'); }
+        }
+
+        async function quickDelete(no) {
+            if (!confirm('确定永久删除 ' + no + '？')) return;
+            try {
+                const resp = await fetch(API + '/api/orders/' + no, { method: 'DELETE' });
+                const r = await resp.json();
+                showToast(r.message);
+                if (r.success) loadAll();
+            } catch (e) { showToast('删除失败'); }
+        }
+
+        loadAll();
+        loadPending();
+    </script>
+</body>
+</html>
