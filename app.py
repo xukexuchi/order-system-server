@@ -195,6 +195,70 @@ def reject_cancel(order_no):
     return jsonify({'success': True, 'message': '作废申请已驳回'})
 
 
+@app.route('/api/orders/<order_no>', methods=['PUT'])
+def update_order(order_no):
+    data = request.json
+    conn = get_db()
+    order = conn.execute('SELECT * FROM orders WHERE order_no = ?', (order_no,)).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({'success': False, 'message': '订单不存在'}), 404
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn.execute('''
+        UPDATE orders SET order_name = ?, functions = ?, extra_features = ?,
+               processor_model = ?, processor_note = ?, total_cost = ?,
+               deposit = ?, updated_at = ?
+        WHERE order_no = ?
+    ''', (
+        data.get('order_name', order['order_name']),
+        data.get('functions', order['functions']),
+        data.get('extra_features', order['extra_features']),
+        data.get('processor_model', order['processor_model']),
+        data.get('processor_note', order['processor_note']),
+        data.get('total_cost', order['total_cost']),
+        data.get('deposit', order['deposit']),
+        now, order_no
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': '订单已更新'})
+
+
+@app.route('/api/orders/<order_no>', methods=['DELETE'])
+def delete_order(order_no):
+    conn = get_db()
+    order = conn.execute('SELECT * FROM orders WHERE order_no = ?', (order_no,)).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({'success': False, 'message': '订单不存在'}), 404
+
+    conn.execute('DELETE FROM settlements WHERE order_no = ?', (order_no,))
+    conn.execute('DELETE FROM orders WHERE order_no = ?', (order_no,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': '订单已删除'})
+
+
+@app.route('/api/orders/<order_no>/force-cancel', methods=['POST'])
+def force_cancel(order_no):
+    conn = get_db()
+    order = conn.execute('SELECT * FROM orders WHERE order_no = ?', (order_no,)).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({'success': False, 'message': '订单不存在'}), 404
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn.execute('''
+        UPDATE orders SET status = 'cancelled', cancel_requested = 0,
+               cancel_reason = '管理端强制作废', updated_at = ?
+        WHERE order_no = ?
+    ''', (now, order_no))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': '订单已强制作废'})
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
