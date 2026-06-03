@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#d32f2f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/admin/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-admin-192.png">
     <title>订单管理 - 管理端</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -215,6 +219,9 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
         const API = '';
 
         document.querySelectorAll('.tab').forEach(tab => {

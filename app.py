@@ -68,14 +68,80 @@ def admin_page():
 def manifest():
     m = {
         "name": "订单管理客户端",
-        "short_name": "订单管理",
+        "short_name": "订单客户端",
         "start_url": "/",
         "display": "standalone",
+        "orientation": "portrait",
         "background_color": "#f5f5f5",
         "theme_color": "#1976d2",
-        "icons": [{"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+        "icons": [
+            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+        ]
     }
     return jsonify(m)
+
+
+@app.route('/admin/manifest.json')
+def admin_manifest():
+    m = {
+        "name": "订单管理端",
+        "short_name": "订单管理",
+        "start_url": "/admin",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#f5f5f5",
+        "theme_color": "#d32f2f",
+        "icons": [
+            {"src": "/icon-admin-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/icon-admin-512.png", "sizes": "512x512", "type": "image/png"}
+        ]
+    }
+    return jsonify(m)
+
+
+@app.route('/sw.js')
+def service_worker():
+    sw_code = """
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+self.addEventListener('fetch', e => {
+    e.respondWith(fetch(e.request).catch(() => new Response('离线状态，请检查网络', {headers: {'Content-Type': 'text/plain; charset=utf-8'}})));
+});
+"""
+    return app.response_class(sw_code, mimetype='application/javascript')
+
+
+@app.route('/icon-192.png')
+@app.route('/icon-512.png')
+@app.route('/icon-admin-192.png')
+@app.route('/icon-admin-512.png')
+def generate_icon():
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+    
+    path = request.path
+    size = 512 if '512' in path else 192
+    is_admin = 'admin' in path
+    
+    img = Image.new('RGB', (size, size), '#1976d2' if not is_admin else '#d32f2f')
+    draw = ImageDraw.Draw(img)
+    
+    font_size = size // 3
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except:
+        font = ImageFont.load_default()
+    
+    text = "管" if is_admin else "订"
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text(((size - tw) / 2, (size - th) / 2 - bbox[1]), text, fill='white', font=font)
+    
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return app.response_class(buf.getvalue(), mimetype='image/png')
 
 
 def build_order_response(conn, order):

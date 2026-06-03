@@ -297,6 +297,9 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
         const API = '';
 
         // Tab switching
