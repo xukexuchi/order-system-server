@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 import sqlite3
 import os
+import json
 from datetime import datetime
 
 app = Flask(__name__)
@@ -51,6 +52,25 @@ def init_db():
 
 
 init_db()
+
+
+@app.route('/')
+def index():
+    return render_template('mobile.html')
+
+
+@app.route('/manifest.json')
+def manifest():
+    m = {
+        "name": "订单管理客户端",
+        "short_name": "订单管理",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f5f5f5",
+        "theme_color": "#1976d2",
+        "icons": [{"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    }
+    return jsonify(m)
 
 
 def build_order_response(conn, order):

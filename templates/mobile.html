@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1976d2">
+    <title>订单管理客户端</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1976d2, #1565c0);
+            color: white;
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 52px;
+            z-index: 99;
+        }
+        .tab {
+            flex: 1;
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            color: #1976d2;
+            border-bottom-color: #1976d2;
+            font-weight: bold;
+        }
+        .tab-content { display: none; padding: 16px; }
+        .tab-content.active { display: block; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #1976d2;
+        }
+        textarea { resize: vertical; min-height: 70px; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #f0f7ff;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .checkbox-item input { width: 16px; height: 16px; }
+        .checkbox-item.checked { background: #1976d2; color: white; }
+        .extra-cost-input {
+            display: none;
+            margin-top: 6px;
+        }
+        .extra-cost-input.show { display: block; }
+        .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .radio-item {
+            padding: 8px 14px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .radio-item.selected { border-color: #1976d2; background: #e3f2fd; color: #1976d2; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #1976d2; color: white; }
+        .btn-primary:active { background: #1565c0; }
+        .btn-danger { background: #d32f2f; color: white; margin-top: 10px; }
+        .btn-danger:active { background: #b71c1c; }
+        .btn-secondary { background: #f5f5f5; color: #333; border: 1px solid #ddd; margin-top: 10px; }
+        .search-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .search-bar input { flex: 1; }
+        .search-bar button {
+            padding: 10px 16px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .order-card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border-left: 4px solid #4caf50;
+        }
+        .order-card.cancelled { border-left-color: #d32f2f; }
+        .order-card.pending { border-left-color: #ff9800; }
+        .order-card .title {
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .order-card .info { font-size: 13px; color: #666; line-height: 1.6; }
+        .order-card .money {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .money-tag {
+            padding: 4px 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-active { background: #e8f5e9; color: #2e7d32; }
+        .status-cancelled { background: #ffebee; color: #d32f2f; }
+        .status-pending { background: #fff3e0; color: #f57c00; }
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .empty { text-align: center; padding: 40px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="header">订单管理客户端</div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="create">创建订单</div>
+        <div class="tab" data-tab="query">查询</div>
+        <div class="tab" data-tab="settle">结算</div>
+    </div>
+
+    <div id="tab-create" class="tab-content active">
+        <div class="card">
+            <div class="form-group">
+                <label>订单号</label>
+                <input type="text" id="order_no" placeholder="请输入订单号">
+            </div>
+            <div class="form-group">
+                <label>订单名称</label>
+                <input type="text" id="order_name" placeholder="请输入订单名称">
+            </div>
+            <div class="form-group">
+                <label>涉及功能</label>
+                <textarea id="functions" placeholder="请描述涉及的功能"></textarea>
+            </div>
+            <div class="form-group">
+                <label>增加功能（可多选）</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-item" data-feature="手机App">
+                        <input type="checkbox" value="手机App"> 手机App
+                    </label>
+                    <label class="checkbox-item" data-feature="大模型">
+                        <input type="checkbox" value="大模型"> 大模型
+                    </label>
+                    <label class="checkbox-item" data-feature="上位机">
+                        <input type="checkbox" value="上位机"> 上位机
+                    </label>
+                    <label class="checkbox-item" data-feature="云平台">
+                        <input type="checkbox" value="云平台"> 云平台
+                    </label>
+                    <label class="checkbox-item" data-feature="其他功能">
+                        <input type="checkbox" value="其他功能"> 其他功能
+                    </label>
+                </div>
+                <div id="other-note-wrap" style="display:none; margin-top:8px;">
+                    <input type="text" id="other_feature_note" placeholder="请说明其他功能内容">
+                </div>
+                <div id="extra-costs"></div>
+            </div>
+            <div class="form-group">
+                <label>微处理器型号</label>
+                <div class="radio-group" id="processor-group">
+                    <div class="radio-item selected" data-value="树莓派4B">树莓派4B</div>
+                    <div class="radio-item" data-value="STM32单片机">STM32单片机</div>
+                    <div class="radio-item" data-value="其他">其他</div>
+                </div>
+                <input type="text" id="processor_note" placeholder="其他型号备注" style="margin-top:8px; display:none;">
+            </div>
+            <div class="form-group">
+                <label>总计费用（元）</label>
+                <input type="number" id="total_cost" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>定金费用（元）</label>
+                <input type="number" id="deposit" placeholder="0.00">
+            </div>
+            <button class="btn btn-primary" onclick="submitOrder()">提交订单</button>
+        </div>
+    </div>
+
+    <div id="tab-query" class="tab-content">
+        <div class="search-bar">
+            <input type="text" id="search_no" placeholder="输入订单号搜索">
+            <button onclick="searchOrder()">搜索</button>
+        </div>
+        <button class="btn btn-secondary" onclick="loadAllOrders()" style="margin-top:0;margin-bottom:12px;">查看全部订单</button>
+        <div id="query-results"><div class="empty">点击"查看全部"加载订单</div></div>
+    </div>
+
+    <div id="tab-settle" class="tab-content">
+        <div class="card">
+            <div class="form-group">
+                <label>订单号</label>
+                <input type="text" id="settle_no" placeholder="输入要结算的订单号">
+            </div>
+            <div class="form-group">
+                <label>本次结算金额（元）</label>
+                <input type="number" id="settle_amount" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>备注</label>
+                <input type="text" id="settle_note" placeholder="可选备注">
+            </div>
+            <button class="btn btn-primary" onclick="submitSettle()">提交结算</button>
+            <button class="btn btn-danger" onclick="requestCancel()">申请作废此单</button>
+        </div>
+        <div id="settle-info"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API = '';
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Checkbox styling
+        document.querySelectorAll('.checkbox-item input').forEach(cb => {
+            cb.addEventListener('change', () => {
+                cb.parentElement.classList.toggle('checked', cb.checked);
+                updateExtraCosts();
+            });
+        });
+
+        function updateExtraCosts() {
+            const container = document.getElementById('extra-costs');
+            container.innerHTML = '';
+            const otherChecked = document.querySelector('.checkbox-item[data-feature="其他功能"] input').checked;
+            document.getElementById('other-note-wrap').style.display = otherChecked ? 'block' : 'none';
+            document.querySelectorAll('.checkbox-item input:checked').forEach(cb => {
+                const name = cb.value;
+                const div = document.createElement('div');
+                div.style.marginTop = '8px';
+                div.innerHTML = `<input type="number" class="extra-cost-field" data-name="${name}" placeholder="${name}费用(元)" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">`;
+                container.appendChild(div);
+            });
+        }
+
+        // Radio buttons
+        document.querySelectorAll('.radio-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.radio-item').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                document.getElementById('processor_note').style.display =
+                    item.dataset.value === '其他' ? 'block' : 'none';
+            });
+        });
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2500);
+        }
+
+        function getExtraFeatures() {
+            const features = [];
+            document.querySelectorAll('.checkbox-item input:checked').forEach(cb => {
+                let name = cb.value;
+                if (name === '其他功能') {
+                    const note = document.getElementById('other_feature_note').value.trim();
+                    if (note) name = note;
+                }
+                const costField = document.querySelector(`.extra-cost-field[data-name="${cb.value}"]`);
+                const cost = costField ? costField.value : '';
+                features.push(cost ? `${name}(¥${cost})` : name);
+            });
+            return features.join(',');
+        }
+
+        async function submitOrder() {
+            const order_no = document.getElementById('order_no').value.trim();
+            const order_name = document.getElementById('order_name').value.trim();
+            const functions = document.getElementById('functions').value.trim();
+
+            if (!order_no || !order_name || !functions) {
+                showToast('请填写订单号、名称和功能');
+                return;
+            }
+
+            const processor = document.querySelector('.radio-item.selected').dataset.value;
+            const data = {
+                order_no, order_name, functions,
+                extra_features: getExtraFeatures(),
+                processor_model: processor,
+                processor_note: processor === '其他' ? document.getElementById('processor_note').value : '',
+                total_cost: parseFloat(document.getElementById('total_cost').value) || 0,
+                deposit: parseFloat(document.getElementById('deposit').value) || 0
+            };
+
+            try {
+                const resp = await fetch(API + '/api/orders', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast('订单创建成功！');
+                    document.getElementById('order_no').value = '';
+                    document.getElementById('order_name').value = '';
+                    document.getElementById('functions').value = '';
+                    document.getElementById('total_cost').value = '';
+                    document.getElementById('deposit').value = '';
+                } else {
+                    showToast(result.message || '创建失败');
+                }
+            } catch (e) {
+                showToast('网络错误，请检查连接');
+            }
+        }
+
+        async function searchOrder() {
+            const no = document.getElementById('search_no').value.trim();
+            if (!no) { showToast('请输入订单号'); return; }
+            try {
+                const resp = await fetch(API + '/api/orders/' + no);
+                if (resp.status === 404) { showToast('未找到该订单'); return; }
+                const order = await resp.json();
+                renderOrders([order]);
+            } catch (e) { showToast('查询失败'); }
+        }
+
+        async function loadAllOrders() {
+            document.getElementById('query-results').innerHTML = '<div class="loading">加载中...</div>';
+            try {
+                const resp = await fetch(API + '/api/orders');
+                const orders = await resp.json();
+                renderOrders(orders);
+            } catch (e) { showToast('加载失败'); }
+        }
+
+        function renderOrders(orders) {
+            const container = document.getElementById('query-results');
+            if (!orders.length) {
+                container.innerHTML = '<div class="empty">暂无订单</div>';
+                return;
+            }
+            container.innerHTML = orders.map(o => {
+                let statusClass = 'status-active', statusText = '正常';
+                let cardClass = '';
+                if (o.status === 'cancelled') {
+                    statusClass = 'status-cancelled'; statusText = '已作废'; cardClass = 'cancelled';
+                } else if (o.cancel_requested) {
+                    statusClass = 'status-pending'; statusText = '审核中'; cardClass = 'pending';
+                }
+                const processor = o.processor_model === '其他' && o.processor_note
+                    ? '其他: ' + o.processor_note : o.processor_model;
+                return `
+                <div class="order-card ${cardClass}">
+                    <div class="title">【${o.order_no}】${o.order_name}
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="info">
+                        功能: ${o.functions}<br>
+                        增加: ${o.extra_features || '无'}<br>
+                        处理器: ${processor}<br>
+                        创建: ${o.created_at || ''}<br>
+                        更新: ${o.updated_at || ''}
+                    </div>
+                    <div class="money">
+                        <span class="money-tag">总计 ¥${o.total_cost.toFixed(2)}</span>
+                        <span class="money-tag">定金 ¥${o.deposit.toFixed(2)}</span>
+                        <span class="money-tag">已结 ¥${(o.total_settled||0).toFixed(2)}</span>
+                        <span class="money-tag">剩余 ¥${(o.remaining||0).toFixed(2)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function submitSettle() {
+            const order_no = document.getElementById('settle_no').value.trim();
+            const amount = parseFloat(document.getElementById('settle_amount').value);
+            if (!order_no) { showToast('请输入订单号'); return; }
+            if (!amount || amount <= 0) { showToast('请输入有效金额'); return; }
+
+            try {
+                const resp = await fetch(API + '/api/orders/' + order_no + '/settle', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ amount, note: document.getElementById('settle_note').value })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast('结算成功');
+                    document.getElementById('settle_amount').value = '';
+                    document.getElementById('settle_note').value = '';
+                    loadSettleInfo(order_no);
+                } else {
+                    showToast(result.message || '结算失败');
+                }
+            } catch (e) { showToast('网络错误'); }
+        }
+
+        async function loadSettleInfo(order_no) {
+            try {
+                const resp = await fetch(API + '/api/orders/' + order_no);
+                if (resp.status === 404) return;
+                const o = await resp.json();
+                let html = `<div class="card" style="margin-top:12px;">
+                    <b>${o.order_no} - ${o.order_name}</b><br>
+                    创建: ${o.created_at || ''}<br>
+                    总计: ¥${o.total_cost.toFixed(2)} | 定金: ¥${o.deposit.toFixed(2)}<br>
+                    已结算: ¥${(o.total_settled||0).toFixed(2)} | 剩余: ¥${(o.remaining||0).toFixed(2)}`;
+                if (o.settlements && o.settlements.length) {
+                    html += '<hr style="margin:8px 0;border:none;border-top:1px solid #eee"><b>结算记录:</b>';
+                    o.settlements.forEach((s, i) => {
+                        html += `<br>第${i+1}次 ¥${s.amount.toFixed(2)} ${s.note||''} [${s.created_at}]`;
+                    });
+                }
+                html += '</div>';
+                document.getElementById('settle-info').innerHTML = html;
+            } catch (e) {}
+        }
+
+        async function requestCancel() {
+            const order_no = document.getElementById('settle_no').value.trim();
+            if (!order_no) { showToast('请输入订单号'); return; }
+            const reason = prompt('请输入作废原因:');
+            if (!reason) return;
+
+            try {
+                const resp = await fetch(API + '/api/orders/' + order_no + '/cancel', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ reason })
+                });
+                const result = await resp.json();
+                showToast(result.message || (result.success ? '已提交' : '失败'));
+            } catch (e) { showToast('网络错误'); }
+        }
+    </script>
+</body>
+</html>
